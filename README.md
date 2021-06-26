@@ -19,14 +19,14 @@ We now have a `package.json` file set up. We need to initialise a TypeScript pro
 npx tsc --init
 ```
 
-This will give us a `tsconfig.json` file that will drive configuration of TypeScript. By default TypeScript transpiles to an older version of JavaScript that predates `class`es.  So we'll update the config to target a newer version of the language that does include them: 
+This will give us a `tsconfig.json` file that will drive configuration of TypeScript. By default TypeScript transpiles to an older version of JavaScript that predates classes.  So we'll update the config to target a newer version of the language that does include them: 
 
 ```json
     "target": "es2020",
     "lib": ["es2020"],
 ```
 
-We'll create ourselves a TypeScript file called `index.ts`. The name is not significant; we just need a file to develop in.
+Let's create ourselves a TypeScript file called `index.ts`. The name is not significant; we just need a file to develop in.
 
 Finally we'll add a script to our `package.json` that compiles our TypeScript to JavaScript, and then runs the JS with node:
 
