@@ -9,8 +9,8 @@ In order that we can dig into this, let's create ourselves a scratchpad project 
 ```bash
 mkdir ts-abstract-constructors
 cd ts-abstract-constructors
-npm init esm --yes
-npm install typescript --save-dev
+npm init --yes
+npm install typescript @types/node --save-dev
 ```
 
 We now have a `package.json` file set up. We need to initialise a TypeScript project as well:
@@ -19,12 +19,19 @@ We now have a `package.json` file set up. We need to initialise a TypeScript pro
 npx tsc --init
 ```
 
-This will give us a `tsconfig.json` file that will drive configuration of TypeScript. We'll create ourselves a TypeScript file called `index.ts`. The name is not significant; we just need a file to develop in.
-
-We could add `ts-node` as a dependency of the project as well, but we don't really need it. Instead we'll add a script to our `package.json` that compiles our TypeScript to JavaScript, and then runs the JS with node:
+This will give us a `tsconfig.json` file that will drive configuration of TypeScript. By default TypeScript transpiles to an older version of JavaScript that predates `class`es.  So we'll update the config to target a newer version of the language that does include them: 
 
 ```json
-"start": "tsc . && node index.js"
+    "target": "es2020",
+    "lib": ["es2020"],
+```
+
+We'll create ourselves a TypeScript file called `index.ts`. The name is not significant; we just need a file to develop in.
+
+Finally we'll add a script to our `package.json` that compiles our TypeScript to JavaScript, and then runs the JS with node:
+
+```json
+"start": "tsc --project \".\" && node index.js"
 ```
 
 ## Making an abstract class
@@ -33,12 +40,11 @@ Now we're ready. Let's add an abstract class with a constructor to our `index.ts
 
 ```ts
 abstract class ViewModel {
-  id: number;
+  id: string;
  
   constructor(id: string) {
-      super();
-      this.id = id;
-   }
+    this.id = id;
+  }
 }
 ```
 
@@ -62,19 +68,24 @@ console.log(`the id is: ${viewModel.id}`);
 
 And sure enough, running `npm start` results in the following error (which is also being reported by our editor; VS Code).
 
+```shell
+index.ts:9:19 - error TS2511: Cannot create an instance of an abstract class.
+
+const viewModel = new ViewModel('my-id');
+```
+
+![Screenshot of "Cannot create an instance of an abstract class." error in VS Code](vs-code-abstract-screenshot.png)
 
 Tremendous. However, it's worth remembering that `abstract` is a TypeScript concept. When we compile our TS, although it's throwing a compilation error, it still transpiles an `index.js` file that looks like this:
 
 ```js
+"use strict";
 class ViewModel {
-  constructor(id) {
-        super();
+    constructor(id) {
         this.id = id;
-  }
+    }
 }
-
 const viewModel = new ViewModel('my-id');
-
 console.log(`the id is: ${viewModel.id}`);
 ```
 
@@ -94,11 +105,13 @@ Let's now create our first subclass of `ViewModel` and attempt to instantiate it
 class NoNewConstructorViewModel extends ViewModel {
 }
 
-// Error
+// error TS2554: Expected 1 arguments, but got 0.
 const viewModel1 = new NoNewConstructorViewModel();
 
 const viewModel2 = new NoNewConstructorViewModel('my-id');
 ```
+
+![Screenshot of "error TS2554: Expected 1 arguments, but got 0." error in VS Code](vs-code-no-new-constructor.png)
 
 As the TypeScript compiler tells us, the second of these instantiations is legitimate as it relies upon the constructor from the base class as we'd hope. The first is not as there is no parameterless constructor.
 
@@ -115,16 +128,26 @@ class NewConstructorViewModel extends ViewModel {
    }
 }
 
-// Error
+// error TS2554: Expected 2 arguments, but got 0.
 const viewModel3 = new NewConstructorViewModel();
 
-// Error
+// error TS2554: Expected 2 arguments, but got 1.
 const viewModel4 = new NewConstructorViewModel('my-id');
 
 const viewModel5 = new NewConstructorViewModel('my-id', 'important info');
 ```
 
+![Screenshot of "error TS2554: Expected 1 arguments, but got 1." error in VS Code](vs-code-new-constructor.png)
+
 Again, only one of the attempted instantiations is legitimate. `viewModel3` is not as there is no parameterless constructor. `viewModel4` is not as we have overridden the base class constructor with our new one that has two parameters. Hence `viewModel5` is our "Goldilocks" instantiation; it's just right!
 
 It's also worth noting that we're calling `super` in the `NewConstructorViewModel` constructor. This invokes the constructor of the `ViewModel` base (or "super") class. TypeScript enforces that we pass the appropriate arguments (in our case a single `string`).
+
+## Wrapping it up
+
+We've seen that TypeScript ensures correct usage of constructors when we have an abstract class. Importantly, all subclasses of abstract classes either:
+
+- do not implement a constructor at all, leaving the base class constructor (the abstract constructor) to become the default constructor of the subclass *or*
+
+- implement their own constructor which invokes the base (or "super") class constructor with the correct arguments.
 
